@@ -1,0 +1,187 @@
+@import "tailwindcss";
+
+@theme {
+  --font-serif: var(--font-cormorant), "Palatino Linotype", Palatino, serif;
+  --font-sans: var(--font-outfit), ui-sans-serif, system-ui, sans-serif;
+  --font-script: var(--font-script), "Palatino Linotype", cursive;
+
+  --color-ivory: #f7f1e8;
+  --color-ivory-deep: #efe6d9;
+  --color-cream: #e8dccb;
+  --color-sand: #d9c7b0;
+  --color-taupe: #a89480;
+  --color-forest: #1e3a2f;
+  --color-forest-deep: #14261f;
+  --color-forest-soft: #2d5243;
+  --color-burgundy: #6e2c3a;
+  --color-wine: #8a3e4c;
+  --color-gold: #c4a574;
+  --color-gold-soft: #d4bc93;
+  --color-ink: #2a221c;
+  --color-ink-soft: #5c5148;
+  --color-blush: #ead7d2;
+  --color-paper: #fbf7f1;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+html,
+body {
+  background: var(--color-ivory);
+  color: var(--color-ink);
+}
+
+body {
+  font-family: var(--font-sans);
+  min-height: 100vh;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--color-burgundy);
+  color: var(--color-ivory);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-forest);
+  outline-offset: 3px;
+}
+
+.font-serif {
+  font-family: var(--font-serif);
+  font-feature-settings: "liga" 1, "kern" 1;
+}
+
+.font-script {
+  font-family: var(--font-script);
+}
+
+.hairline {
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--color-gold) 70%, transparent),
+    transparent
+  );
+}
+
+.frame-line {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-gold) 45%, transparent);
+}
+
+.product-frame {
+  background:
+    radial-gradient(120% 80% at 50% 0%, rgba(255, 255, 255, 0.55), transparent 55%),
+    var(--color-ivory-deep);
+}
+
+/* ---- Lefemme introduction gate ---- */
+.entrance-bg {
+  background:
+    radial-gradient(90% 55% at 50% 30%, rgba(255, 255, 255, 0.6), transparent 60%),
+    radial-gradient(60% 40% at 50% 100%, rgba(196, 165, 116, 0.14), transparent 70%),
+    var(--color-ivory);
+}
+
+.entrance-perspective {
+  perspective: 1400px;
+}
+
+.gate-panel {
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+  will-change: transform;
+}
+
+.bg-radial-vignette {
+  background: radial-gradient(circle at center, transparent 40%, rgba(20, 38, 31, 0.75) 85%, rgba(20, 38, 31, 0.95) 100%);
+}
+
+.bg-radial-glow {
+  background: radial-gradient(circle at center, rgba(196, 165, 116, 0.5) 0%, rgba(247, 241, 232, 0.2) 50%, transparent 80%);
+}
+
+@keyframes lefemme-petal-drift {
+  0%,
+  100% {
+    transform: translateY(-7px) rotate(-8deg);
+  }
+  50% {
+    transform: translateY(9px) rotate(14deg);
+  }
+}
+
+@keyframes bloom-light-pulse {
+  0%, 100% {
+    opacity: 0.6;
+    transform: scale(0.96);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1.05);
+  }
+}
+
+.entrance-petal {
+  animation: lefemme-petal-drift 7s ease-in-out infinite;
+}
+
+.bloom-glow {
+  animation: bloom-light-pulse 4s ease-in-out infinite;
+}
+
+@media (pointer: fine) {
+  html.has-floral-cursor,
+  html.has-floral-cursor * {
+    cursor: url("/images/ui/flower-cursor.svg") 6 6, auto;
+  }
+
+  html.has-floral-cursor a,
+  html.has-floral-cursor button,
+  html.has-floral-cursor [role="button"],
+  html.has-floral-cursor summary,
+  html.has-floral-cursor input,
+  html.has-floral-cursor select,
+  html.has-floral-cursor textarea,
+  html.has-floral-cursor label {
+    cursor: url("/images/ui/flower-cursor-pointer.svg") 8 8, pointer;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .motion-fade {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .marquee-track,
+  .scroll-cue-line,
+  .entrance-petal {
+    animation: none;
+  }
+
+  .scroll-cue-line {
+    transform: scaleY(1);
+  }
+}
+
+.skip-link {
+  position: absolute;
+  left: 1rem;
+  top: -40px;
+  z-index: 100;
+  background: var(--color-forest);
+  color: var(--color-ivory);
+  padding: 0.5rem 0.9rem;
+}
+
+.skip-link:focus {
+  top: 0.75rem;
+}
