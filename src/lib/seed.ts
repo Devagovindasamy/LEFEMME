@@ -1,5 +1,5 @@
 import { products } from "@/data/catalog";
-import { db, pool } from "@/db";
+import { db, pool, isDatabaseConfigured } from "@/db";
 import { productsTable } from "@/db/schema";
 
 let seedPromise: Promise<void> | null = null;
@@ -8,6 +8,10 @@ let lastAttemptTime = 0;
 const RETRY_COOLDOWN_MS = 60_000;
 
 async function checkDatabaseReady(): Promise<boolean> {
+  if (!isDatabaseConfigured()) {
+    return false;
+  }
+
   let client;
   try {
     client = await pool.connect();

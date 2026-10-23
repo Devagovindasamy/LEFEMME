@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { db } from "@/db";
+import { db, isDatabaseConfigured } from "@/db";
 import { bloomClubSignups } from "@/db/schema";
 import { ensureCatalogSeeded } from "@/lib/seed";
 
@@ -17,6 +17,13 @@ export async function POST(request: Request) {
     return NextResponse.json(
       { ok: false, message: "Please enter a valid email address." },
       { status: 400 },
+    );
+  }
+
+  if (!isDatabaseConfigured()) {
+    return NextResponse.json(
+      { ok: false, message: "Newsletter signup persistence is unavailable because no database is configured for this demo." },
+      { status: 503 },
     );
   }
 

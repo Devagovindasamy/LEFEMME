@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { db } from "@/db";
+import { db, isDatabaseConfigured } from "@/db";
 import { demoOrders } from "@/db/schema";
 import { products } from "@/data/catalog";
 import { ensureCatalogSeeded } from "@/lib/seed";
@@ -52,21 +52,35 @@ export async function POST(request: Request) {
     }
   }
 
+  if (!isDatabaseConfigured()) {
+    return NextResponse.json(
+      { ok: false, message: "Order placement is unavailable because no database is configured for this demo." },
+      { status: 503 },
+    );
+  }
+
   const subtotalCents = parsed.data.items.reduce(
     (sum, item) => sum + item.unitPriceCents * item.quantity,
     0,
   );
   const orderId = `demo-${Date.now().toString(36)}`;
 
-  await db.insert(demoOrders).values({
-    id: orderId,
-    name: parsed.data.name,
-    email: parsed.data.email.toLowerCase(),
-    items: parsed.data.items,
-    subtotalCents,
-    status: "demo_placed",
-    note: "Demonstration order only. No payment collected.",
-  });
+  try {
+    await db.insert(demoOrders).values({
+      id: orderId,
+      name: parsed.data.name,
+      email: parsed.data.email.toLowerCase(),
+      items: parsed.data.items,
+      subtotalCents,
+      status: "demo_placed",
+      note: "Demonstration order only. No payment collected.",
+    });
 
-  return NextResponse.json({ ok: true, orderId });
+    return NextResponse.json({ ok: true, orderId });
+  } catch {
+    return NextResponse.json(
+      { ok: false, message: "Could not record this demo order." },
+      { status: 500 },
+    );
+  }
 }

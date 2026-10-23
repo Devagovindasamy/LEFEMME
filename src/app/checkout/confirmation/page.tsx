@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { db } from "@/db";
+import { db, isDatabaseConfigured } from "@/db";
 import { demoOrders } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { formatDemoPrice } from "@/data/catalog";
@@ -19,7 +19,7 @@ export default async function ConfirmationPage({
 }) {
   const { order: orderId } = await searchParams;
   let order: typeof demoOrders.$inferSelect | undefined;
-  if (orderId) {
+  if (orderId && isDatabaseConfigured()) {
     try {
       const rows = await db
         .select()
