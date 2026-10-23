@@ -185,3 +185,55 @@ body {
 .skip-link:focus {
   top: 0.75rem;
 }
+
+/* Demo 1 Entrance Gate Animations */
+@keyframes floaty {
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  50% { transform: translateY(-6px) rotate(2deg); }
+}
+.floaty { animation: floaty 5s ease-in-out infinite; }
+
+@keyframes gateSway {
+  0%, 100% { transform: rotate(-1.6deg); }
+  50% { transform: rotate(1.6deg); }
+}
+.gate-sway {
+  animation: gateSway 5.5s ease-in-out infinite;
+  transform-origin: 50% 100%;
+}
+
+@keyframes gateBlink {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 0.9; }
+}
+.gate-blink { animation: gateBlink 2.6s ease-in-out infinite; }
+
+@keyframes gateGlow {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.3); }
+  30% { opacity: 1; }
+  70% { opacity: 0.85; }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.5); }
+}
+.gate-glow {
+  animation: gateGlow 1.15s cubic-bezier(0.22, 1, 0.36, 1) 0.25s forwards;
+  opacity: 0;
+}
+
+@keyframes petalDrift {
+  0% { opacity: 0; transform: translate3d(0, 10px, 0) scale(0.55) rotate(0deg); }
+  22% { opacity: 0.95; }
+  100% { opacity: 0; transform: translate3d(var(--pdx, 0px), var(--pdy, -28px), 0) scale(1) rotate(var(--prot, 28deg)); }
+}
+.petal-drift {
+  animation: petalDrift 1.45s cubic-bezier(0.2, 0.8, 0.3, 1) var(--pdelay, 0ms) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .floaty,
+  .gate-sway,
+  .gate-blink,
+  .gate-glow,
+  .petal-drift {
+    animation: none !important;
+  }
+}

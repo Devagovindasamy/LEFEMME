@@ -1,70 +1,117 @@
 "use client";
 
-import React, { useEffect, useRef, useState, useCallback } from "react";
-import * as THREE from "three";
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
-import gsap from "gsap";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { brand } from "@/data/brand";
-import { Sparkles, ArrowRight, RotateCw } from "lucide-react";
+import { BloomDiscovery } from "@/components/interactive/BloomDiscovery";
 
-/**
- * LEFEMME — CINEMATIC LUXURY FASHION ENTRANCE & EDITORIAL 3D EXPERIENCE
- *
- * Architecture:
- * 1. Immediate Editorial Brand Reveal:
- *    - Minimalist warm ivory canvas with forest green wordmark, masked typography line reveals,
- *      and an animated botanical flower line motif with an elegant, truthful progress bar.
- * 2. True Download & Parse Synchronization:
- *    - Tracks actual GLB download progress (bytes loaded / total).
- *    - Pre-compiles shaders and executes the first valid Three.js render pass in memory.
- * 3. Seamless Dissolve Transition:
- *    - Once the model is genuinely ready, the loader dissolves smoothly into the hero 3D scene.
- *    - The intact Adina handbag is revealed with high-fashion camera movement and soft studio chiaroscuro.
- * 4. Error Resilience:
- *    - If network connectivity fails, a refined retry button and skip action appear gracefully.
- */
+type Stage = "idle" | "opening" | "exiting";
+
+/* Tiny Lefemme botanical sparkles & corner garden vignettes (line-art, brand palette) */
+function Sparkle({ className = "", fill = "#C6A15B", delay = "0ms" }: { className?: string; fill?: string; delay?: string }) {
+  return (
+    <svg viewBox="-5 -5 10 10" className={`gate-blink absolute ${className}`} style={{ animationDelay: delay }} aria-hidden="true">
+      <path d="M0 -4 L1 -1 L4 0 L1 1 L0 4 L-1 1 L-4 0 L-1 -1 Z" fill={fill} />
+    </svg>
+  );
+}
+
+function CornerGarden({ side }: { side: "left" | "right" }) {
+  return (
+    <div
+      aria-hidden="true"
+      className={`pointer-events-none absolute bottom-0 ${side === "left" ? "left-0" : "right-0"} hidden md:block`}
+      style={side === "right" ? { transform: "scaleX(-1)" } : undefined}
+    >
+      <svg viewBox="0 0 190 170" className="h-36 w-44 lg:h-44 lg:w-52 opacity-80">
+        {/* Tall wandering stem with two blush buds */}
+        <path d="M46 158 C42 124 53 100 46 66 C44 52 47 42 44 28" fill="none" stroke="#A89B8A" strokeWidth="1" strokeOpacity=".75" />
+        <ellipse cx="45" cy="33" rx="4.6" ry="7.4" fill="#D9C6C9" fillOpacity=".85" transform="rotate(-8 45 33)" />
+        <ellipse cx="50" cy="72" rx="4" ry="6.6" fill="#C6A15B" fillOpacity=".5" transform="rotate(12 50 72)" />
+        {/* Small flowering sprig */}
+        <path d="M16 158 C15 132 18 116 14 96" fill="none" stroke="#A89B8A" strokeWidth="1" strokeOpacity=".6" />
+        <g transform="translate(13.5 90)">
+          {[0, 72, 144, 216, 288].map((d) => (
+            <circle key={d} cx="0" cy="-3.4" r="1.7" fill="#D9B8BC" transform={`rotate(${d})`} />
+          ))}
+          <circle cx="0" cy="0" r="1.3" fill="#C6A15B" />
+        </g>
+        {/* Picket fence with tiny flowers */}
+        <g stroke="#B4A48C" strokeOpacity=".8" strokeWidth="1.1" fill="none">
+          <path d="M112 158 L112 116 L117 108 L122 116 L122 158" />
+          <path d="M131 158 L131 116 L136 108 L141 116 L141 158" />
+          <path d="M150 158 L150 116 L155 108 L160 116 L160 158" />
+          <path d="M169 158 L169 116 L174 108 L179 116 L179 158" />
+          <path d="M108 128 H183" strokeOpacity=".55" />
+          <path d="M108 144 H183" strokeOpacity=".55" />
+        </g>
+        <g transform="translate(138 124)">
+          {[0, 72, 144, 216, 288].map((d) => (
+            <circle key={d} cx="0" cy="-3" r="1.5" fill="#C6A15B" fillOpacity=".8" transform={`rotate(${d})`} />
+          ))}
+        </g>
+        <g transform="translate(172 122)">
+          {[0, 72, 144, 216, 288].map((d) => (
+            <circle key={d} cx="0" cy="-3" r="1.5" fill="#D9B8BC" fillOpacity=".9" transform={`rotate(${d})`} />
+          ))}
+        </g>
+        {/* Grass tufts */}
+        {[24, 88, 152].map((gx) => (
+          <g key={gx} transform={`translate(${gx} 158)`} stroke="#A89B8A" strokeOpacity=".55" strokeWidth="1" fill="none">
+            <path d="M0 0 C0 -6 2 -10 5 -12" />
+            <path d="M4 0 C4 -7 7 -11 10 -13" />
+            <path d="M8 0 C9 -6 12 -9 15 -11" />
+          </g>
+        ))}
+      </svg>
+    </div>
+  );
+}
+
+/* One arched door leaf — left or right */
+function DoorLeaf({ side }: { side: "left" | "right" }) {
+  const knobX = side === "left" ? 96 : 14;
+  const wreath = [0, 45, 90, 135, 180, 225, 270, 315];
+  return (
+    <svg viewBox="0 0 110 248" className="h-full w-full" aria-hidden="true">
+      <path d="M4 246 V68 Q4 6 55 6 Q106 6 106 68 V246 Z" fill="#F3EBDD" stroke="#C9B394" strokeWidth="1.4" />
+      <path d="M10 240 V70 Q10 13 55 13 Q100 13 100 70 V240 Z" fill="none" stroke="#DACBAF" strokeWidth="0.8" strokeOpacity=".7" />
+      {/* Floral wreath */}
+      <g transform="translate(55 76)">
+        {wreath.map((d, i) => (
+          <ellipse key={d} cx="0" cy="-20.5" rx="4.5" ry="2.5" transform={`rotate(${d})`} fill={i % 3 === 0 ? "#C6A15B" : i % 3 === 1 ? "#D9B8BC" : "#A89B8A"} fillOpacity=".78" />
+        ))}
+        <circle cx="0" cy="0" r="8.5" fill="none" stroke="#C9B394" strokeWidth="0.9" strokeOpacity=".8" />
+        <circle cx="0" cy="0" r="1.7" fill="#6B1F2E" fillOpacity=".7" />
+      </g>
+      {/* Lower panel */}
+      <rect x="24" y="152" width="62" height="62" fill="none" stroke="#C9B394" strokeWidth="1" strokeOpacity=".85" />
+      <rect x="30" y="158" width="50" height="50" fill="none" stroke="#C9B394" strokeWidth="0.7" strokeOpacity=".4" />
+      {/* Champagne knob near the meeting edge */}
+      <circle cx={knobX} cy="208" r="2.6" fill="#C6A15B" />
+    </svg>
+  );
+}
+
+const BURST_PETALS = [
+  { dx: "-26px", dy: "-64px", rot: "-38deg", delay: "120ms", fill: "#F3EBDD", stroke: "#C6A15B" },
+  { dx: "24px", dy: "-72px", rot: "40deg", delay: "210ms", fill: "#EBCFD2", stroke: "#C6A15B" },
+  { dx: "-4px", dy: "-88px", rot: "16deg", delay: "300ms", fill: "#E5C687", stroke: "#FAF6EF" },
+  { dx: "36px", dy: "-48px", rot: "52deg", delay: "390ms", fill: "#6B1F2E", stroke: "#C6A15B" },
+  { dx: "-38px", dy: "-50px", rot: "-55deg", delay: "470ms", fill: "#D9C6C9", stroke: "#C6A15B" },
+];
 
 let hasPassedEntranceInSession = false;
 
-export function EntranceGate() {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const overlayRef = useRef<HTMLDivElement>(null);
-
-  // DOM Refs for animations
-  const loaderRef = useRef<HTMLDivElement>(null);
-  const progressBarRef = useRef<HTMLDivElement>(null);
-  const introTextRef = useRef<HTMLDivElement>(null);
-  const finalCtaRef = useRef<HTMLDivElement>(null);
-
+export function EntranceGate({ onEnter }: { onEnter?: () => void }) {
   const [active, setActive] = useState(false);
-  const [loadError, setLoadError] = useState(false);
-  const [downloadProgress, setDownloadProgress] = useState<number | null>(null);
-  const [isTransitioning, setIsTransitioning] = useState(false);
-  const [retryCount, setRetryCount] = useState(0);
+  const [stage, setStage] = useState<Stage>("idle");
+  const [reducedFade, setReducedFade] = useState(false);
+  const timersRef = useRef<number[]>([]);
 
-  // 3D Scene Refs
-  const threeRefs = useRef<{
-    scene?: THREE.Scene;
-    camera?: THREE.PerspectiveCamera;
-    renderer?: THREE.WebGLRenderer;
-    modelRoot?: THREE.Group;
-    keyLight?: THREE.DirectionalLight;
-    rimLight?: THREE.DirectionalLight;
-    fillLight?: THREE.DirectionalLight;
-    isModelReady: boolean;
-    mouseX: number;
-    mouseY: number;
-    targetMouseX: number;
-    targetMouseY: number;
-    reqId?: number;
-    masterTimeline?: gsap.core.Timeline;
-  }>({
-    isModelReady: false,
-    mouseX: 0,
-    mouseY: 0,
-    targetMouseX: 0,
-    targetMouseY: 0,
-  });
+  const clearAll = useCallback(() => {
+    timersRef.current.forEach((id) => window.clearTimeout(id));
+    timersRef.current = [];
+  }, []);
 
   const dismissEntrance = useCallback(() => {
     hasPassedEntranceInSession = true;
@@ -73,85 +120,16 @@ export function EntranceGate() {
     } catch {
       /* ignore */
     }
+    clearAll();
     setActive(false);
-  }, []);
-
-  const handleEnterStore = useCallback(() => {
-    if (isTransitioning) return;
-    setIsTransitioning(true);
-
-    const { camera, modelRoot, keyLight } = threeRefs.current;
-    const tl = gsap.timeline({
-      onComplete: () => dismissEntrance(),
-    });
-
-    if (finalCtaRef.current) {
-      tl.to(
-        finalCtaRef.current,
-        {
-          opacity: 0,
-          y: -25,
-          duration: 0.6,
-          ease: "power2.inOut",
-        },
-        0
-      );
-    }
-
-    if (camera) {
-      tl.to(
-        camera.position,
-        {
-          z: 1.6,
-          y: -0.05,
-          duration: 1.2,
-          ease: "power3.inOut",
-        },
-        0.1
-      );
-    }
-
-    if (modelRoot) {
-      tl.to(
-        modelRoot.rotation,
-        {
-          y: modelRoot.rotation.y + 0.3,
-          duration: 1.2,
-          ease: "power3.inOut",
-        },
-        0.1
-      );
-    }
-
-    if (keyLight) {
-      tl.to(
-        keyLight,
-        {
-          intensity: 3.8,
-          duration: 0.8,
-          ease: "power2.in",
-        },
-        0.3
-      );
-    }
-
-    if (overlayRef.current) {
-      tl.to(
-        overlayRef.current,
-        {
-          opacity: 0,
-          duration: 0.75,
-          ease: "power2.inOut",
-        },
-        0.65
-      );
-    }
-  }, [dismissEntrance, isTransitioning]);
+    onEnter?.();
+  }, [clearAll, onEnter]);
 
   // Session detection & URL params
   useEffect(() => {
     (window as unknown as { __lefemmeReplayEntrance?: () => void }).__lefemmeReplayEntrance = () => {
       hasPassedEntranceInSession = false;
+      setStage("idle");
       setActive(true);
     };
 
@@ -182,431 +160,221 @@ export function EntranceGate() {
     }
   }, []);
 
-  // Three.js & Synchronized Loading Orchestration
   useEffect(() => {
-    if (!active || !containerRef.current) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") dismissEntrance();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      clearAll();
+    };
+  }, [clearAll, dismissEntrance]);
 
-    const container = containerRef.current;
-    const width = container.clientWidth || window.innerWidth;
-    const height = container.clientHeight || window.innerHeight;
+  const openTheGate = useCallback(() => {
+    if (stage !== "idle") return;
 
-    // 1. Scene
-    const scene = new THREE.Scene();
-    scene.background = new THREE.Color("#FAF7F2"); // Warm ivory
-    scene.fog = new THREE.FogExp2("#FAF7F2", 0.028);
-    threeRefs.current.scene = scene;
-
-    // 2. Camera — High fashion portrait perspective
-    const camera = new THREE.PerspectiveCamera(35, width / height, 0.1, 40);
-    camera.position.set(0, 0.05, 3.85); // Preserves complete handbag and handle visibility
-    threeRefs.current.camera = camera;
-
-    // 3. Renderer
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
-    renderer.setSize(width, height);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.toneMapping = THREE.NeutralToneMapping;
-    renderer.toneMappingExposure = 1.04;
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    container.appendChild(renderer.domElement);
-    threeRefs.current.renderer = renderer;
-
-    // 4. Soft Luxury Studio Lighting Rig
-    const keyLight = new THREE.DirectionalLight("#FFF8EE", 1.8);
-    keyLight.position.set(3.2, 4.0, 3.5);
-    keyLight.castShadow = true;
-    keyLight.shadow.mapSize.width = 2048;
-    keyLight.shadow.mapSize.height = 2048;
-    keyLight.shadow.bias = -0.0001;
-    keyLight.shadow.normalBias = 0.02;
-    scene.add(keyLight);
-    threeRefs.current.keyLight = keyLight;
-
-    const rimLight = new THREE.DirectionalLight("#ECCB96", 1.3);
-    rimLight.position.set(-3.2, 2.8, -2.5);
-    scene.add(rimLight);
-    threeRefs.current.rimLight = rimLight;
-
-    const fillLight = new THREE.DirectionalLight("#FFFFFF", 0.7);
-    fillLight.position.set(0, 1.5, 3.2);
-    scene.add(fillLight);
-    threeRefs.current.fillLight = fillLight;
-
-    // Atelier Ground Shadow Plane (Receives contact shadows from handbag)
-    const shadowGeo = new THREE.PlaneGeometry(8, 8);
-    const shadowMat = new THREE.ShadowMaterial({ opacity: 0.15 });
-    const shadowPlane = new THREE.Mesh(shadowGeo, shadowMat);
-    shadowPlane.rotation.x = -Math.PI / 2;
-    shadowPlane.position.y = -1.05;
-    shadowPlane.receiveShadow = true;
-    scene.add(shadowPlane);
-
-    // Initial loader presentation animation
-    if (loaderRef.current) {
-      const loaderItems = loaderRef.current.querySelectorAll(".loader-anim-item");
-      gsap.fromTo(
-        loaderItems,
-        { y: 18, opacity: 0 },
-        { y: 0, opacity: 1, duration: 0.9, stagger: 0.14, ease: "power3.out" }
-      );
+    if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setReducedFade(true);
+      const t = window.setTimeout(() => dismissEntrance(), 280);
+      timersRef.current.push(t);
+      return;
     }
 
-    // 5. Load Original, Intact adina.glb With Progress Tracking
-    const loader = new GLTFLoader();
-    let isDisposed = false;
+    // Stage 2 — the two arched doors swing open toward the visitor (~1.25s)
+    setStage("opening");
 
-    loader.load(
-      "/adina.glb",
-      (gltf) => {
-        if (isDisposed) return;
-        const root = gltf.scene;
-
-        root.traverse((child) => {
-          if ((child as THREE.Mesh).isMesh) {
-            const mesh = child as THREE.Mesh;
-            mesh.castShadow = true;
-            mesh.receiveShadow = false; // Prevent self-shadow acne on thin-shell mesh
-
-            if (mesh.material) {
-              const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-              mats.forEach((m) => {
-                m.side = THREE.FrontSide;
-              });
-            }
-          }
-        });
-
-        // Center model geometry
-        const box = new THREE.Box3().setFromObject(root);
-        const center = box.getCenter(new THREE.Vector3());
-        root.position.x = -center.x;
-        root.position.y = -center.y;
-        root.position.z = -center.z;
-
-        // Presentation angles: complete bag and handle visible
-        root.rotation.y = -0.35;
-        root.rotation.x = 0.02;
-
-        scene.add(root);
-        threeRefs.current.modelRoot = root;
-
-        // Pre-compile shaders and perform warm-up render pass
-        renderer.compile(scene, camera);
-        camera.lookAt(0, -0.06, 0);
-        renderer.render(scene, camera);
-
-        threeRefs.current.isModelReady = true;
-
-        // ============================================================
-        // SEAMLESS TRANSITION FROM EDITORIAL LOADER TO HERO 3D SCENE
-        // ============================================================
-        const transitionTl = gsap.timeline({ delay: 0.1 });
-        threeRefs.current.masterTimeline = transitionTl;
-
-        // 1. Complete progress bar fill
-        if (progressBarRef.current) {
-          transitionTl.to(
-            progressBarRef.current,
-            { width: "100%", duration: 0.4, ease: "power2.out" },
-            0
-          );
-        }
-
-        // 2. Smoothly dissolve loader overlay
-        if (loaderRef.current) {
-          transitionTl.to(
-            loaderRef.current,
-            {
-              opacity: 0,
-              y: -15,
-              duration: 0.75,
-              ease: "power2.inOut",
-              pointerEvents: "none",
-            },
-            0.3
-          );
-        }
-
-        // 3. Scene 1 Editorial Typography Reveal
-        if (introTextRef.current) {
-          const lines = introTextRef.current.querySelectorAll(".mask-line-inner");
-          transitionTl.fromTo(
-            lines,
-            { y: "110%", opacity: 0 },
-            { y: "0%", opacity: 1, duration: 1.0, stagger: 0.16, ease: "power3.out" },
-            0.6
-          );
-
-          // Fade out Scene 1 typography as camera approaches
-          transitionTl.to(
-            introTextRef.current,
-            { opacity: 0, y: -20, duration: 0.8, ease: "power2.inOut" },
-            2.6
-          );
-        }
-
-        // 4. Scene 2 Handbag Reveal & Camera Move
-        transitionTl.to(
-          camera.position,
-          { z: 3.45, y: 0.04, duration: 2.2, ease: "power3.out" },
-          2.2
-        );
-        transitionTl.to(
-          root.rotation,
-          { y: 0.10, x: 0.0, duration: 2.2, ease: "power3.out" },
-          2.2
-        );
-
-        // 5. Scene 3 Enter the Bloom Club CTA Reveal
-        if (finalCtaRef.current) {
-          const ctaElements = finalCtaRef.current.querySelectorAll(".cta-fade");
-          transitionTl.fromTo(
-            finalCtaRef.current,
-            { opacity: 0 },
-            { opacity: 1, duration: 0.4, ease: "none" },
-            3.6
-          );
-          transitionTl.fromTo(
-            ctaElements,
-            { y: 20, opacity: 0 },
-            { y: 0, opacity: 1, duration: 0.9, stagger: 0.12, ease: "power2.out" },
-            3.6
-          );
-        }
-      },
-      (xhr) => {
-        if (xhr.lengthComputable && xhr.total > 0) {
-          const ratio = Math.min(100, Math.round((xhr.loaded / xhr.total) * 100));
-          setDownloadProgress(ratio);
-        }
-      },
-      (err) => {
-        console.error("Failed to load adina.glb for entrance:", err);
-        setLoadError(true);
-      }
-    );
-
-    // Mouse Interaction
-    const handleMouseMove = (e: MouseEvent) => {
-      threeRefs.current.targetMouseX = (e.clientX / window.innerWidth - 0.5) * 2;
-      threeRefs.current.targetMouseY = (e.clientY / window.innerHeight - 0.5) * 2;
-    };
-    window.addEventListener("mousemove", handleMouseMove);
-
-    // Animation & Render Loop
-    let clock = new THREE.Clock();
-    const renderLoop = () => {
-      threeRefs.current.reqId = requestAnimationFrame(renderLoop);
-      const delta = clock.getDelta();
-
-      // Mouse inertia
-      threeRefs.current.mouseX += (threeRefs.current.targetMouseX - threeRefs.current.mouseX) * 0.045;
-      threeRefs.current.mouseY += (threeRefs.current.targetMouseY - threeRefs.current.mouseY) * 0.045;
-
-      const { modelRoot, camera, isModelReady } = threeRefs.current;
-      if (modelRoot && isModelReady) {
-        modelRoot.rotation.y += (threeRefs.current.mouseX * 0.2 - (modelRoot.rotation.y - 0.10)) * 0.03;
-        modelRoot.rotation.x += (-threeRefs.current.mouseY * 0.12 - modelRoot.rotation.x) * 0.03;
-      }
-
-      if (camera) {
-        camera.lookAt(0, -0.06, 0);
-        renderer.render(scene, camera);
-      }
-    };
-    renderLoop();
-
-    const handleResize = () => {
-      if (!container) return;
-      const w = container.clientWidth || window.innerWidth;
-      const h = container.clientHeight || window.innerHeight;
-      camera.aspect = w / h;
-      camera.updateProjectionMatrix();
-      renderer.setSize(w, h);
-    };
-    window.addEventListener("resize", handleResize);
-
-    return () => {
-      isDisposed = true;
-      if (threeRefs.current.masterTimeline) threeRefs.current.masterTimeline.kill();
-      if (threeRefs.current.reqId) cancelAnimationFrame(threeRefs.current.reqId);
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("resize", handleResize);
-      renderer.dispose();
-      if (container) container.innerHTML = "";
-    };
-  }, [active, dismissEntrance, retryCount]);
+    // Stage 3 — the whole garden scene breathes out & fades to reveal the boutique
+    const tExit = window.setTimeout(() => setStage("exiting"), 1400);
+    const tDone = window.setTimeout(() => dismissEntrance(), 2050);
+    timersRef.current.push(tExit, tDone);
+  }, [dismissEntrance, stage]);
 
   if (!active) return null;
 
+  const isOpen = stage === "opening" || stage === "exiting";
+
   return (
     <div
-      ref={overlayRef}
-      className="fixed inset-0 z-50 overflow-hidden bg-[#FAF7F2] font-sans select-none flex flex-col justify-between"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Lefemme garden gate entrance"
+      className={`fixed inset-0 z-[100] select-none overflow-hidden bg-[#FAF6EF] transition-all duration-[650ms] ease-out ${
+        stage === "exiting" || reducedFade ? "pointer-events-none scale-[1.03] opacity-0" : "opacity-100"
+      }`}
+      style={{
+        background:
+          "radial-gradient(ellipse 70% 62% at 50% 44%, #FCF8F1 0%, #FAF6EF 55%, #F6EFE4 100%)",
+      }}
     >
-      {/* 3D Canvas Viewport */}
-      <div ref={containerRef} className="absolute inset-0 w-full h-full cursor-grab active:cursor-grabbing" />
+      {/* Warm ground band at the very bottom */}
+      <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-9 bg-[#F1E7D7]" />
+      <div aria-hidden="true" className="absolute inset-x-0 bottom-9 h-px bg-[#C9B394]/25" />
 
-      {/* Top Header Bar */}
-      <header className="relative z-30 flex items-center justify-between px-8 py-6">
-        <div className="flex items-center gap-3">
-          <span className="font-serif text-lg tracking-[0.28em] uppercase text-forest font-medium">
-            Lefemme
-          </span>
-          <span className="h-px w-6 bg-gold/50" />
-          <span className="text-[10px] uppercase tracking-[0.3em] text-burgundy font-medium">
-            {brand.community}
-          </span>
-        </div>
+      {/* Corners of the little garden */}
+      <CornerGarden side="left" />
+      <CornerGarden side="right" />
 
-        <button
-          onClick={dismissEntrance}
-          className="text-[11px] uppercase tracking-[0.24em] text-forest/70 hover:text-forest transition-colors py-1.5 px-3.5 rounded-full border border-forest/15 hover:border-forest/40 bg-white/40 backdrop-blur-sm"
-        >
-          Skip Entrance
-        </button>
-      </header>
+      {/* Falling petal top-left & scattered sparkles */}
+      <svg viewBox="-8 -8 16 16" className="floaty absolute left-7 top-8 h-4 w-4 opacity-70 md:left-12 md:top-10" aria-hidden="true">
+        <path d="M0 4.6 C-3.8 1.2, -3.4 -4, 0 -5.6 C3.4 -4, 3.8 1.2, 0 4.6 Z" fill="#D9B8BC" transform="rotate(-28)" />
+      </svg>
+      <Sparkle className="right-[16%] top-[14%] h-3 w-3" delay="300ms" />
+      <Sparkle className="left-[20%] top-[30%] h-2.5 w-2.5" fill="#D9B8BC" delay="900ms" />
+      <Sparkle className="right-[26%] top-[52%] h-2.5 w-2.5" delay="1500ms" />
+      <span className="absolute left-[13%] top-[58%] h-1.5 w-1.5 rounded-full bg-[#6B1F2E]/40" aria-hidden="true" />
+      <span className="absolute right-[11%] top-[36%] h-1 w-1 rounded-full bg-[#C6A15B]/60" aria-hidden="true" />
 
-      {/* ============================================================ */}
-      {/* LUXURY EDITORIAL LOADER OVERLAY                              */}
-      {/* ============================================================ */}
-      <div
-        ref={loaderRef}
-        className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-[#FAF7F2] px-6 transition-opacity"
+      {/* Top-right skip */}
+      <button
+        type="button"
+        onClick={dismissEntrance}
+        className="absolute right-6 top-6 text-[11px] uppercase tracking-[0.34em] text-[#A89B8A] transition hover:text-[#6B1F2E] md:right-10 md:top-8"
       >
-        <div className="max-w-md w-full flex flex-col items-center text-center">
-          {/* Animated Botanical Motif */}
-          <div className="loader-anim-item relative w-12 h-12 mb-6 text-burgundy">
-            <svg viewBox="0 0 48 48" className="w-full h-full animate-[spin_16s_linear_infinite]" fill="none">
-              <circle cx="24" cy="24" r="22" stroke="#ECCB96" strokeWidth="0.8" strokeDasharray="3 3" />
-              <path
-                d="M24 10C24 10 27.5 17 27.5 24C27.5 31 24 38 24 38C24 38 20.5 31 20.5 24C20.5 17 24 10 24 10Z"
-                fill="#6E2C3A"
-                fillOpacity="0.25"
-                stroke="#6E2C3A"
-                strokeWidth="0.8"
-              />
-              <path
-                d="M10 24C10 24 17 20.5 24 20.5C31 20.5 38 24 38 24C38 24 31 27.5 24 27.5C17 27.5 10 24 10 24Z"
-                fill="#6E2C3A"
-                fillOpacity="0.25"
-                stroke="#6E2C3A"
-                strokeWidth="0.8"
-              />
-              <circle cx="24" cy="24" r="3" fill="#C4A574" />
-            </svg>
+        Skip Entrance
+      </button>
+
+      {/* Bottom-left Bloomie note */}
+      <div className="absolute bottom-10 left-6 md:bottom-14 md:left-12">
+        <BloomDiscovery quoteId="entrance-welcome" variant="whisper" align="left" label="psst… open the gate" />
+      </div>
+
+      {/* Center stage */}
+      <div className="flex h-full flex-col items-center justify-center px-4">
+        <p className="mb-5 text-center font-serif text-xl italic text-[#6B1F2E]/90 md:text-2xl">
+          A little boutique for a world of blooms.
+        </p>
+
+        {/* The gate */}
+        <div
+          onClick={openTheGate}
+          role="button"
+          tabIndex={0}
+          aria-label="Open the gate"
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              openTheGate();
+            }
+          }}
+          className="relative cursor-pointer focus:outline-none"
+          style={{
+            width: "min(74vw, 320px)",
+            aspectRatio: "330 / 340",
+            perspective: "1000px",
+          }}
+        >
+          {/* Static arch, halo circle, garland & ground line */}
+          <svg viewBox="0 0 330 340" className="absolute inset-0 h-full w-full overflow-visible" aria-hidden="true">
+            <path d="M48 302 V122 Q48 42 165 42 Q282 42 282 122 V302" fill="none" stroke="#C6A15B" strokeOpacity=".5" strokeWidth="1.3" />
+            <path d="M58 302 V128 Q58 58 165 58 Q272 58 272 128 V302" fill="none" stroke="#A89B8A" strokeOpacity=".28" strokeWidth="1" />
+            <circle cx="165" cy="82" r="26" fill="none" stroke="#A89B8A" strokeOpacity=".5" strokeWidth="1.1" strokeDasharray="1.6 6.5" strokeLinecap="round" />
+            <path d="M148 30 Q165 18 182 30" fill="none" stroke="#C6A15B" strokeWidth="1.2" strokeOpacity=".85" />
+            <circle cx="165" cy="25" r="2.6" fill="#6B1F2E" fillOpacity=".8" />
+            {/* Petal garland across the arch */}
+            {[
+              { x: 92, y: 100, r: -32, f: "#C6A15B" },
+              { x: 107, y: 82, r: -20, f: "#A89B8A" },
+              { x: 125, y: 69, r: -10, f: "#D9B8BC" },
+              { x: 145, y: 60, r: -3, f: "#C6A15B" },
+              { x: 165, y: 57, r: 0, f: "#6B1F2E" },
+              { x: 185, y: 60, r: 3, f: "#A89B8A" },
+              { x: 205, y: 69, r: 10, f: "#C6A15B" },
+              { x: 223, y: 82, r: 20, f: "#D9B8BC" },
+              { x: 238, y: 100, r: 32, f: "#A89B8A" },
+            ].map((p, i) => (
+              <ellipse key={i} cx={p.x} cy={p.y} rx="4.8" ry="2.5" fill={p.f} fillOpacity=".8" transform={`rotate(${p.r} ${p.x} ${p.y})`} />
+            ))}
+            <path d="M34 302 H296" stroke="#A89B8A" strokeOpacity=".5" strokeWidth="1.2" strokeLinecap="round" />
+          </svg>
+
+          {/* LEFT door leaf (hinged on its left edge) */}
+          <div
+            className="absolute"
+            style={{
+              left: `${(55 / 330) * 100}%`,
+              top: `${(52 / 340) * 100}%`,
+              width: `${(110 / 330) * 100}%`,
+              height: `${(248 / 340) * 100}%`,
+              transformOrigin: "0% 50%",
+              transformStyle: "preserve-3d",
+              transform: isOpen ? "rotateY(98deg)" : "rotateY(0deg)",
+              transition: "transform 1250ms cubic-bezier(.32,.02,.2,1)",
+            }}
+          >
+            <div className="gate-sway h-full w-full">{<DoorLeaf side="left" />}</div>
           </div>
 
-          <span className="loader-anim-item text-[10px] uppercase tracking-[0.34em] text-burgundy font-medium mb-2">
-            Atelier Lefemme · Haute Maroquinerie
-          </span>
-
-          <h2 className="loader-anim-item font-serif text-3xl sm:text-4xl font-light text-forest tracking-tight leading-tight mb-2">
-            A little bloom for <span className="italic text-burgundy font-normal">every bag.</span>
-          </h2>
-
-          <p className="loader-anim-item text-xs text-ink-soft/80 font-light max-w-xs leading-relaxed mb-8">
-            Preparing your sculptural 3D experience…
-          </p>
-
-          {/* Minimalist Champagne Progress Indicator */}
-          {!loadError ? (
-            <div className="loader-anim-item w-48 flex flex-col items-center gap-2">
-              <div className="w-full h-[1.5px] bg-forest/10 rounded-full overflow-hidden relative">
-                {downloadProgress !== null ? (
-                  <div
-                    ref={progressBarRef}
-                    className="h-full bg-forest transition-all duration-300 ease-out"
-                    style={{ width: `${downloadProgress}%` }}
-                  />
-                ) : (
-                  <div
-                    ref={progressBarRef}
-                    className="h-full bg-forest w-1/3 rounded-full animate-[indeterminate_1.6s_easeInOut_infinite]"
-                  />
-                )}
-              </div>
-              <span className="text-[10px] tracking-[0.24em] uppercase text-taupe/80 font-mono">
-                {downloadProgress !== null ? `${downloadProgress}%` : "CRAFTING"}
-              </span>
-            </div>
-          ) : (
-            <div className="loader-anim-item flex flex-col items-center gap-3 mt-2">
-              <p className="text-xs text-burgundy font-light">Unable to load 3D asset at this moment.</p>
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => {
-                    setLoadError(false);
-                    setRetryCount((c) => c + 1);
-                  }}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-forest/20 text-[10px] uppercase tracking-wider text-forest hover:bg-forest hover:text-ivory transition-colors"
-                >
-                  <RotateCw className="w-3 h-3" /> Retry
-                </button>
-                <button
-                  onClick={dismissEntrance}
-                  className="px-3.5 py-1.5 rounded-full bg-forest text-[10px] uppercase tracking-wider text-ivory hover:bg-forest-soft transition-colors"
-                >
-                  Continue to Store
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Scene 1: Typography Mask Reveal (Presented once model is ready) */}
-      <div
-        ref={introTextRef}
-        className="relative z-10 max-w-xl mx-auto px-6 text-center flex flex-col items-center gap-2 pointer-events-none my-auto opacity-0"
-      >
-        <div className="overflow-hidden">
-          <span className="mask-line-inner block text-[11px] uppercase tracking-[0.34em] text-burgundy font-medium">
-            Atelier Lefemme · Haute Maroquinerie
-          </span>
-        </div>
-
-        <div className="overflow-hidden mt-1">
-          <h1 className="mask-line-inner block font-serif text-4xl sm:text-5xl lg:text-6xl font-light text-forest tracking-tight leading-tight">
-            A little bloom for <span className="italic text-burgundy font-normal">every bag.</span>
-          </h1>
-        </div>
-
-        <div className="overflow-hidden mt-2">
-          <p className="mask-line-inner block text-xs sm:text-sm text-ink-soft/80 font-light max-w-md leading-relaxed">
-            Handcrafted botanical silhouettes sculpted in supple calfskin and finished with champagne gold accents.
-          </p>
-        </div>
-      </div>
-
-      {/* Scene 3: Final Hero Call to Action */}
-      <div
-        ref={finalCtaRef}
-        className="relative z-20 max-w-lg mx-auto px-6 pb-12 sm:pb-16 text-center flex flex-col items-center gap-3 pointer-events-auto opacity-0"
-      >
-        <span className="cta-fade text-[10px] uppercase tracking-[0.32em] text-gold font-medium">
-          House Signature Piece · Adina
-        </span>
-
-        <h2 className="cta-fade font-serif text-3xl sm:text-4xl font-light text-forest tracking-tight">
-          Unclasp your <span className="italic text-burgundy font-normal">floral world.</span>
-        </h2>
-
-        <div className="cta-fade mt-3 flex items-center gap-4">
-          <button
-            onClick={handleEnterStore}
-            className="group inline-flex items-center gap-3 bg-forest px-8 py-3.5 rounded-full text-xs uppercase tracking-[0.22em] text-ivory shadow-[0_10px_24px_rgba(30,58,47,0.22)] transition-all hover:bg-forest-soft hover:shadow-[0_14px_32px_rgba(30,58,47,0.32)] active:scale-[0.98]"
+          {/* RIGHT door leaf (hinged on its right edge) */}
+          <div
+            className="absolute"
+            style={{
+              left: `${(165 / 330) * 100}%`,
+              top: `${(52 / 340) * 100}%`,
+              width: `${(110 / 330) * 100}%`,
+              height: `${(248 / 340) * 100}%`,
+              transformOrigin: "100% 50%",
+              transformStyle: "preserve-3d",
+              transform: isOpen ? "rotateY(-98deg)" : "rotateY(0deg)",
+              transition: "transform 1250ms cubic-bezier(.32,.02,.2,1)",
+            }}
           >
-            <Sparkles className="w-3.5 h-3.5 text-gold group-hover:rotate-12 transition-transform" />
-            <span>ENTER THE BLOOM CLUB</span>
-            <ArrowRight className="w-3.5 h-3.5 text-ivory/70 group-hover:translate-x-1 transition-transform" />
-          </button>
+            <div className="h-full w-full"><DoorLeaf side="right" /></div>
+          </div>
+
+          {/* Soft champagne glow + petals spilling from the gap as the doors part */}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute left-1/2 top-[58%]"
+            style={{ zIndex: 5 }}
+          >
+            {isOpen && (
+              <>
+                <span className="gate-glow absolute -left-12 -top-12 block h-24 w-24 rounded-full" style={{ background: "radial-gradient(circle, rgba(255,249,232,0.95) 0%, rgba(235,207,161,0.55) 48%, rgba(250,246,239,0) 78%)" }} />
+                {BURST_PETALS.map((p, i) => (
+                  <span
+                    key={i}
+                    className="petal-drift absolute -ml-1.5 -mt-1.5 block h-3 w-3"
+                    style={{ "--pdx": p.dx, "--pdy": p.dy, "--prot": p.rot, "--pdelay": p.delay } as React.CSSProperties}
+                  >
+                    <svg viewBox="0 0 16 16" className="h-full w-full">
+                      <path d="M8 1 C11.5 4.5, 12.5 9.5, 8 15 C3.5 9.5, 4.5 4.5, 8 1 Z" fill={p.fill} stroke={p.stroke} strokeWidth="1" />
+                    </svg>
+                  </span>
+                ))}
+              </>
+            )}
+          </div>
         </div>
 
-        <span className="cta-fade text-[10px] text-taupe tracking-widest uppercase mt-1">
-          Drag to explore in 360°
-        </span>
+        {/* OPEN THE GATE trigger */}
+        <button
+          type="button"
+          onClick={openTheGate}
+          className="mt-3 text-[11px] uppercase tracking-[0.4em] text-[#A89B8A] transition hover:text-[#6B1F2E] md:mt-4"
+        >
+          {stage === "idle" ? "Open the Gate" : "…"}
+        </button>
+
+        {/* Tiny three-petal sprig */}
+        <svg viewBox="0 0 24 16" className="mt-2.5 h-4 w-6 text-[#6B1F2E]/70" aria-hidden="true">
+          <path d="M12 15 V9" stroke="currentColor" strokeWidth="1" />
+          <ellipse cx="12" cy="6.5" rx="2.4" ry="3.4" fill="#D9B8BC" />
+          <ellipse cx="7.6" cy="9" rx="2.2" ry="3" fill="#C6A15B" fillOpacity=".8" transform="rotate(-28 7.6 9)" />
+          <ellipse cx="16.4" cy="9" rx="2.2" ry="3" fill="#C6A15B" fillOpacity=".8" transform="rotate(28 16.4 9)" />
+        </svg>
+
+        {/* Hand-lettered welcome */}
+        <p className="mt-3 flex items-center gap-2 font-script text-[26px] leading-none text-[#6B1F2E] md:text-3xl">
+          Welcome to the Lefemme garden
+          <svg viewBox="0 0 20 20" className="h-4 w-4" aria-hidden="true">
+            {[0, 72, 144, 216, 288].map((d) => (
+              <ellipse key={d} cx="10" cy="5.2" rx="2.6" ry="4" fill="none" stroke="#6B1F2E" strokeWidth="1" transform={`rotate(${d} 10 10)`} />
+            ))}
+            <circle cx="10" cy="10" r="1.4" fill="#C6A15B" />
+          </svg>
+        </p>
+        <p className="mt-3 text-[10px] uppercase tracking-[0.42em] text-[#A89B8A]">Lefemme · The Bloom Club</p>
       </div>
     </div>
   );

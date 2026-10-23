@@ -7,7 +7,7 @@ import { getQuoteById, BloomDiscoveryQuote } from "@/data/quotes";
 
 interface BloomDiscoveryProps {
   quoteId: string;
-  variant?: "seal" | "tag" | "petal" | "ribbon";
+  variant?: "seal" | "tag" | "petal" | "ribbon" | "whisper";
   className?: string;
   label?: string;
   align?: "left" | "right" | "center";
@@ -64,6 +64,20 @@ export function BloomDiscovery({
         >
           <span className="h-2 w-2 rotate-45 bg-gold group-hover:rotate-90 transition-transform duration-300" />
           <span className="sr-only">{label ?? "Open note"}</span>
+        </button>
+      )}
+
+      {variant === "whisper" && (
+        <button
+          type="button"
+          onClick={() => setIsOpen((prev) => !prev)}
+          aria-expanded={isOpen}
+          className="group inline-flex items-center gap-1.5 rounded-full border border-burgundy/20 bg-ivory/90 px-3.5 py-1 text-left shadow-xs transition hover:border-burgundy/45 hover:bg-white"
+        >
+          <Sparkles className="h-3 w-3 text-gold" />
+          <span className="font-script text-lg leading-none text-burgundy">
+            {label ?? "psst… open the gate"}
+          </span>
         </button>
       )}
 
