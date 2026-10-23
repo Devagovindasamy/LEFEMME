@@ -5,17 +5,23 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import gsap from "gsap";
 import { brand } from "@/data/brand";
-import { Sparkles, ArrowRight } from "lucide-react";
+import { Sparkles, ArrowRight, RotateCw } from "lucide-react";
 
 /**
- * LEFEMME — CINEMATIC LUXURY FASHION ENTRANCE EXPERIENCE
+ * LEFEMME — CINEMATIC LUXURY FASHION ENTRANCE & EDITORIAL 3D EXPERIENCE
  *
- * Storyboard:
- * - Scene 1: Typography mask reveal on warm ivory ("A little bloom for every bag").
- * - Scene 2: Intact Adina handbag reveal with soft chiaroscuro & golden champagne rim light.
- * - Scene 3: Camera push-in with gentle 3D rotation & directional light sweep across leather & gold hardware.
- * - Scene 4: The Bloom Moment — subtle, curved 3D rose petals drifting through foreground.
- * - Scene 5: Enter the Store CTA ("ENTER THE BLOOM CLUB"), Skip Entrance, seamless dissolve to storefront.
+ * Architecture:
+ * 1. Immediate Editorial Brand Reveal:
+ *    - Minimalist warm ivory canvas with forest green wordmark, masked typography line reveals,
+ *      and an animated botanical flower line motif with an elegant, truthful progress bar.
+ * 2. True Download & Parse Synchronization:
+ *    - Tracks actual GLB download progress (bytes loaded / total).
+ *    - Pre-compiles shaders and executes the first valid Three.js render pass in memory.
+ * 3. Seamless Dissolve Transition:
+ *    - Once the model is genuinely ready, the loader dissolves smoothly into the hero 3D scene.
+ *    - The intact Adina handbag is revealed with high-fashion camera movement and soft studio chiaroscuro.
+ * 4. Error Resilience:
+ *    - If network connectivity fails, a refined retry button and skip action appear gracefully.
  */
 
 let hasPassedEntranceInSession = false;
@@ -24,13 +30,17 @@ export function EntranceGate() {
   const containerRef = useRef<HTMLDivElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
 
-  // Scene DOM Refs for masked typography reveals
+  // DOM Refs for animations
+  const loaderRef = useRef<HTMLDivElement>(null);
+  const progressBarRef = useRef<HTMLDivElement>(null);
   const introTextRef = useRef<HTMLDivElement>(null);
   const finalCtaRef = useRef<HTMLDivElement>(null);
 
   const [active, setActive] = useState(false);
-  const [modelLoaded, setModelLoaded] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState<number | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
 
   // 3D Scene Refs
   const threeRefs = useRef<{
@@ -41,12 +51,15 @@ export function EntranceGate() {
     keyLight?: THREE.DirectionalLight;
     rimLight?: THREE.DirectionalLight;
     fillLight?: THREE.DirectionalLight;
+    isModelReady: boolean;
     mouseX: number;
     mouseY: number;
     targetMouseX: number;
     targetMouseY: number;
     reqId?: number;
+    masterTimeline?: gsap.core.Timeline;
   }>({
+    isModelReady: false,
     mouseX: 0,
     mouseY: 0,
     targetMouseX: 0,
@@ -169,7 +182,7 @@ export function EntranceGate() {
     }
   }, []);
 
-  // Three.js & GSAP 5-Scene Orchestration
+  // Three.js & Synchronized Loading Orchestration
   useEffect(() => {
     if (!active || !containerRef.current) return;
 
@@ -200,7 +213,6 @@ export function EntranceGate() {
     threeRefs.current.renderer = renderer;
 
     // 4. Soft Luxury Studio Lighting Rig
-    // Soft Key Light (Studio Softbox)
     const keyLight = new THREE.DirectionalLight("#FFF8EE", 1.8);
     keyLight.position.set(3.2, 4.0, 3.5);
     keyLight.castShadow = true;
@@ -211,13 +223,11 @@ export function EntranceGate() {
     scene.add(keyLight);
     threeRefs.current.keyLight = keyLight;
 
-    // Champagne Rim Light (Accenting gold hardware and leather silhouette)
     const rimLight = new THREE.DirectionalLight("#ECCB96", 1.3);
     rimLight.position.set(-3.2, 2.8, -2.5);
     scene.add(rimLight);
     threeRefs.current.rimLight = rimLight;
 
-    // Soft Fill Light
     const fillLight = new THREE.DirectionalLight("#FFFFFF", 0.7);
     fillLight.position.set(0, 1.5, 3.2);
     scene.add(fillLight);
@@ -232,31 +242,42 @@ export function EntranceGate() {
     shadowPlane.receiveShadow = true;
     scene.add(shadowPlane);
 
-    // 5. Load Original, Intact adina.glb Without Geometry Manipulation or Material Overwrites
+    // Initial loader presentation animation
+    if (loaderRef.current) {
+      const loaderItems = loaderRef.current.querySelectorAll(".loader-anim-item");
+      gsap.fromTo(
+        loaderItems,
+        { y: 18, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.9, stagger: 0.14, ease: "power3.out" }
+      );
+    }
+
+    // 5. Load Original, Intact adina.glb With Progress Tracking
     const loader = new GLTFLoader();
+    let isDisposed = false;
+
     loader.load(
       "/adina.glb",
       (gltf) => {
+        if (isDisposed) return;
         const root = gltf.scene;
 
         root.traverse((child) => {
           if ((child as THREE.Mesh).isMesh) {
             const mesh = child as THREE.Mesh;
-            // Enable casting shadow onto ground plane, but preserve native material properties
             mesh.castShadow = true;
             mesh.receiveShadow = false; // Prevent self-shadow acne on thin-shell mesh
 
             if (mesh.material) {
               const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
               mats.forEach((m) => {
-                // Ensure front-side rendering to prevent backface z-fighting/shadow artifacts
                 m.side = THREE.FrontSide;
               });
             }
           }
         });
 
-        // Center model geometry perfectly
+        // Center model geometry
         const box = new THREE.Box3().setFromObject(root);
         const center = box.getCenter(new THREE.Vector3());
         root.position.x = -center.x;
@@ -269,65 +290,100 @@ export function EntranceGate() {
 
         scene.add(root);
         threeRefs.current.modelRoot = root;
-        setModelLoaded(true);
 
-        // ==========================================
-        // GSAP CINEMATIC LUXURY TIMELINE
-        // ==========================================
-        const masterTl = gsap.timeline({ delay: 0.2 });
+        // Pre-compile shaders and perform warm-up render pass
+        renderer.compile(scene, camera);
+        camera.lookAt(0, -0.06, 0);
+        renderer.render(scene, camera);
 
-        // --- SCENE 1: Typography Mask Reveal ---
+        threeRefs.current.isModelReady = true;
+
+        // ============================================================
+        // SEAMLESS TRANSITION FROM EDITORIAL LOADER TO HERO 3D SCENE
+        // ============================================================
+        const transitionTl = gsap.timeline({ delay: 0.1 });
+        threeRefs.current.masterTimeline = transitionTl;
+
+        // 1. Complete progress bar fill
+        if (progressBarRef.current) {
+          transitionTl.to(
+            progressBarRef.current,
+            { width: "100%", duration: 0.4, ease: "power2.out" },
+            0
+          );
+        }
+
+        // 2. Smoothly dissolve loader overlay
+        if (loaderRef.current) {
+          transitionTl.to(
+            loaderRef.current,
+            {
+              opacity: 0,
+              y: -15,
+              duration: 0.75,
+              ease: "power2.inOut",
+              pointerEvents: "none",
+            },
+            0.3
+          );
+        }
+
+        // 3. Scene 1 Editorial Typography Reveal
         if (introTextRef.current) {
           const lines = introTextRef.current.querySelectorAll(".mask-line-inner");
-          masterTl.fromTo(
+          transitionTl.fromTo(
             lines,
             { y: "110%", opacity: 0 },
-            { y: "0%", opacity: 1, duration: 1.1, stagger: 0.18, ease: "power3.out" },
-            0.1
+            { y: "0%", opacity: 1, duration: 1.0, stagger: 0.16, ease: "power3.out" },
+            0.6
           );
 
           // Fade out Scene 1 typography as camera approaches
-          masterTl.to(
+          transitionTl.to(
             introTextRef.current,
             { opacity: 0, y: -20, duration: 0.8, ease: "power2.inOut" },
-            2.2
+            2.6
           );
         }
 
-        // --- SCENE 2: Handbag Reveal & Camera Move ---
-        // Smooth camera push-in and subtle luxury turntable rotation
-        masterTl.to(
+        // 4. Scene 2 Handbag Reveal & Camera Move
+        transitionTl.to(
           camera.position,
           { z: 3.45, y: 0.04, duration: 2.2, ease: "power3.out" },
-          1.8
+          2.2
         );
-        masterTl.to(
+        transitionTl.to(
           root.rotation,
           { y: 0.10, x: 0.0, duration: 2.2, ease: "power3.out" },
-          1.8
+          2.2
         );
 
-        // --- SCENE 3: Enter the Bloom Club CTA Reveal ---
+        // 5. Scene 3 Enter the Bloom Club CTA Reveal
         if (finalCtaRef.current) {
           const ctaElements = finalCtaRef.current.querySelectorAll(".cta-fade");
-          masterTl.fromTo(
+          transitionTl.fromTo(
             finalCtaRef.current,
             { opacity: 0 },
             { opacity: 1, duration: 0.4, ease: "none" },
-            3.2
+            3.6
           );
-          masterTl.fromTo(
+          transitionTl.fromTo(
             ctaElements,
             { y: 20, opacity: 0 },
             { y: 0, opacity: 1, duration: 0.9, stagger: 0.12, ease: "power2.out" },
-            3.2
+            3.6
           );
         }
       },
-      undefined,
+      (xhr) => {
+        if (xhr.lengthComputable && xhr.total > 0) {
+          const ratio = Math.min(100, Math.round((xhr.loaded / xhr.total) * 100));
+          setDownloadProgress(ratio);
+        }
+      },
       (err) => {
         console.error("Failed to load adina.glb for entrance:", err);
-        dismissEntrance();
+        setLoadError(true);
       }
     );
 
@@ -348,13 +404,11 @@ export function EntranceGate() {
       threeRefs.current.mouseX += (threeRefs.current.targetMouseX - threeRefs.current.mouseX) * 0.045;
       threeRefs.current.mouseY += (threeRefs.current.targetMouseY - threeRefs.current.mouseY) * 0.045;
 
-      const { modelRoot, camera } = threeRefs.current;
-      if (modelRoot && modelLoaded) {
-        modelRoot.rotation.y += (threeRefs.current.mouseX * 0.2 - (modelRoot.rotation.y - 0.15)) * 0.03;
+      const { modelRoot, camera, isModelReady } = threeRefs.current;
+      if (modelRoot && isModelReady) {
+        modelRoot.rotation.y += (threeRefs.current.mouseX * 0.2 - (modelRoot.rotation.y - 0.10)) * 0.03;
         modelRoot.rotation.x += (-threeRefs.current.mouseY * 0.12 - modelRoot.rotation.x) * 0.03;
       }
-
-
 
       if (camera) {
         camera.lookAt(0, -0.06, 0);
@@ -374,13 +428,15 @@ export function EntranceGate() {
     window.addEventListener("resize", handleResize);
 
     return () => {
+      isDisposed = true;
+      if (threeRefs.current.masterTimeline) threeRefs.current.masterTimeline.kill();
       if (threeRefs.current.reqId) cancelAnimationFrame(threeRefs.current.reqId);
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("resize", handleResize);
       renderer.dispose();
       if (container) container.innerHTML = "";
     };
-  }, [active, dismissEntrance, modelLoaded]);
+  }, [active, dismissEntrance, retryCount]);
 
   if (!active) return null;
 
@@ -393,7 +449,7 @@ export function EntranceGate() {
       <div ref={containerRef} className="absolute inset-0 w-full h-full cursor-grab active:cursor-grabbing" />
 
       {/* Top Header Bar */}
-      <header className="relative z-20 flex items-center justify-between px-8 py-6">
+      <header className="relative z-30 flex items-center justify-between px-8 py-6">
         <div className="flex items-center gap-3">
           <span className="font-serif text-lg tracking-[0.28em] uppercase text-forest font-medium">
             Lefemme
@@ -412,10 +468,98 @@ export function EntranceGate() {
         </button>
       </header>
 
-      {/* Scene 1: Typography Mask Reveal */}
+      {/* ============================================================ */}
+      {/* LUXURY EDITORIAL LOADER OVERLAY                              */}
+      {/* ============================================================ */}
+      <div
+        ref={loaderRef}
+        className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-[#FAF7F2] px-6 transition-opacity"
+      >
+        <div className="max-w-md w-full flex flex-col items-center text-center">
+          {/* Animated Botanical Motif */}
+          <div className="loader-anim-item relative w-12 h-12 mb-6 text-burgundy">
+            <svg viewBox="0 0 48 48" className="w-full h-full animate-[spin_16s_linear_infinite]" fill="none">
+              <circle cx="24" cy="24" r="22" stroke="#ECCB96" strokeWidth="0.8" strokeDasharray="3 3" />
+              <path
+                d="M24 10C24 10 27.5 17 27.5 24C27.5 31 24 38 24 38C24 38 20.5 31 20.5 24C20.5 17 24 10 24 10Z"
+                fill="#6E2C3A"
+                fillOpacity="0.25"
+                stroke="#6E2C3A"
+                strokeWidth="0.8"
+              />
+              <path
+                d="M10 24C10 24 17 20.5 24 20.5C31 20.5 38 24 38 24C38 24 31 27.5 24 27.5C17 27.5 10 24 10 24Z"
+                fill="#6E2C3A"
+                fillOpacity="0.25"
+                stroke="#6E2C3A"
+                strokeWidth="0.8"
+              />
+              <circle cx="24" cy="24" r="3" fill="#C4A574" />
+            </svg>
+          </div>
+
+          <span className="loader-anim-item text-[10px] uppercase tracking-[0.34em] text-burgundy font-medium mb-2">
+            Atelier Lefemme · Haute Maroquinerie
+          </span>
+
+          <h2 className="loader-anim-item font-serif text-3xl sm:text-4xl font-light text-forest tracking-tight leading-tight mb-2">
+            A little bloom for <span className="italic text-burgundy font-normal">every bag.</span>
+          </h2>
+
+          <p className="loader-anim-item text-xs text-ink-soft/80 font-light max-w-xs leading-relaxed mb-8">
+            Preparing your sculptural 3D experience…
+          </p>
+
+          {/* Minimalist Champagne Progress Indicator */}
+          {!loadError ? (
+            <div className="loader-anim-item w-48 flex flex-col items-center gap-2">
+              <div className="w-full h-[1.5px] bg-forest/10 rounded-full overflow-hidden relative">
+                {downloadProgress !== null ? (
+                  <div
+                    ref={progressBarRef}
+                    className="h-full bg-forest transition-all duration-300 ease-out"
+                    style={{ width: `${downloadProgress}%` }}
+                  />
+                ) : (
+                  <div
+                    ref={progressBarRef}
+                    className="h-full bg-forest w-1/3 rounded-full animate-[indeterminate_1.6s_easeInOut_infinite]"
+                  />
+                )}
+              </div>
+              <span className="text-[10px] tracking-[0.24em] uppercase text-taupe/80 font-mono">
+                {downloadProgress !== null ? `${downloadProgress}%` : "CRAFTING"}
+              </span>
+            </div>
+          ) : (
+            <div className="loader-anim-item flex flex-col items-center gap-3 mt-2">
+              <p className="text-xs text-burgundy font-light">Unable to load 3D asset at this moment.</p>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => {
+                    setLoadError(false);
+                    setRetryCount((c) => c + 1);
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-forest/20 text-[10px] uppercase tracking-wider text-forest hover:bg-forest hover:text-ivory transition-colors"
+                >
+                  <RotateCw className="w-3 h-3" /> Retry
+                </button>
+                <button
+                  onClick={dismissEntrance}
+                  className="px-3.5 py-1.5 rounded-full bg-forest text-[10px] uppercase tracking-wider text-ivory hover:bg-forest-soft transition-colors"
+                >
+                  Continue to Store
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Scene 1: Typography Mask Reveal (Presented once model is ready) */}
       <div
         ref={introTextRef}
-        className="relative z-10 max-w-xl mx-auto px-6 text-center flex flex-col items-center gap-2 pointer-events-none my-auto"
+        className="relative z-10 max-w-xl mx-auto px-6 text-center flex flex-col items-center gap-2 pointer-events-none my-auto opacity-0"
       >
         <div className="overflow-hidden">
           <span className="mask-line-inner block text-[11px] uppercase tracking-[0.34em] text-burgundy font-medium">
@@ -436,7 +580,7 @@ export function EntranceGate() {
         </div>
       </div>
 
-      {/* Scene 5: Final Reveal Call to Action */}
+      {/* Scene 3: Final Hero Call to Action */}
       <div
         ref={finalCtaRef}
         className="relative z-20 max-w-lg mx-auto px-6 pb-12 sm:pb-16 text-center flex flex-col items-center gap-3 pointer-events-auto opacity-0"
