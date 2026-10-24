@@ -232,7 +232,7 @@ export function Hero() {
                   >
                     <div className="relative aspect-square w-full rounded-xs border border-gold/30 bg-[#FAF6F0] p-2.5 shadow-xs transition-all duration-300 group-hover:border-gold">
                       <Image
-                        src="/images/client_products/Ariel/beige.png"
+                        src="/images/client_products/Ariel/Beige.png"
                         alt="Ariel Floral Medium Handbag in Ivory Bloom"
                         fill
                         sizes="40vw"
@@ -252,7 +252,7 @@ export function Hero() {
                   >
                     <div className="relative aspect-square w-full rounded-xs border border-gold/30 bg-[#FAF6F0] p-2.5 shadow-xs transition-all duration-300 group-hover:border-gold">
                       <Image
-                        src="/images/client_products/Noa/black.png"
+                        src="/images/client_products/Noa/Black.png"
                         alt="Noa Structured Floral Shoulder Bag in Midnight Bloom"
                         fill
                         sizes="40vw"
@@ -276,7 +276,7 @@ export function Hero() {
                 >
                   <div className="relative aspect-square w-full rounded-xs border border-gold/35 bg-[#FAF6F0] p-2.5 sm:p-3 shadow-xs transition-all duration-300 group-hover:border-gold group-hover:shadow-md">
                     <Image
-                      src="/images/client_products/Ariel/beige.png"
+                      src="/images/client_products/Ariel/Beige.png"
                       alt="Ariel Floral Medium Handbag in Ivory Bloom"
                       fill
                       sizes="(min-width: 1024px) 15vw, 25vw"
@@ -335,7 +335,7 @@ export function Hero() {
                 >
                   <div className="relative aspect-square w-full rounded-xs border border-gold/35 bg-[#FAF6F0] p-2.5 sm:p-3 shadow-xs transition-all duration-300 group-hover:border-gold group-hover:shadow-md">
                     <Image
-                      src="/images/client_products/Noa/black.png"
+                      src="/images/client_products/Noa/Black.png"
                       alt="Noa Structured Floral Shoulder Bag in Midnight Bloom"
                       fill
                       sizes="(min-width: 1024px) 15vw, 25vw"
