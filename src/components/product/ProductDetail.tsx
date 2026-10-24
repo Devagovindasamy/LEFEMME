@@ -8,6 +8,9 @@ import { brandFeatures } from "@/data/catalog";
 import { DemoNote, DemoPrice } from "@/components/ui/DemoNote";
 import { useCartStore } from "@/store/cart";
 import { cn } from "@/lib/cn";
+import { SeenInBloom } from "@/components/product/SeenInBloom";
+import { CustomerReviews } from "@/components/product/CustomerReviews";
+import { ProductGallery } from "@/components/product/ProductGallery";
 
 export function ProductDetail({ product }: { product: Product }) {
   const addItem = useCartStore((s) => s.addItem);
@@ -22,8 +25,35 @@ export function ProductDetail({ product }: { product: Product }) {
     [colorSlug, product.colors],
   );
 
+  // Sync color selection when clicking a gallery thumbnail
+  function handleThumbnailClick(index: number) {
+    setActiveImage(index);
+    const clickedImage = product.images[index];
+    if (clickedImage) {
+      // Find matching color variant if one exists with this imageSrc
+      const matchingColor = product.colors.find(
+        (c) => c.imageSrc === clickedImage.src && c.available
+      );
+      if (matchingColor) {
+        setColorSlug(matchingColor.slug);
+      }
+    }
+  }
+
+  // Sync gallery image when clicking a color swatch
+  function handleColorSelect(slug: string) {
+    setColorSlug(slug);
+    const color = product.colors.find((c) => c.slug === slug);
+    if (color?.imageSrc) {
+      const imgIdx = product.images.findIndex((img) => img.src === color.imageSrc);
+      if (imgIdx !== -1) {
+        setActiveImage(imgIdx);
+      }
+    }
+  }
+
   const galleryImage = product.images[activeImage] ?? product.images[0];
-  const mainSrc = selected?.imageSrc ?? galleryImage.src;
+  const mainSrc = galleryImage?.src ?? selected?.imageSrc ?? "/images/placeholder-product.svg";
   const imageComingSoon = Boolean(selected && !selected.imageSrc);
 
   function add() {
@@ -49,50 +79,21 @@ export function ProductDetail({ product }: { product: Product }) {
   return (
     <div className="grid gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:gap-16">
       <div>
-        <div
-          className={cn(
-            "product-frame relative overflow-hidden rounded-xs border border-gold/40 bg-[#FBF8F3] shadow-sm",
-            product.category === "charm" ? "aspect-square" : "aspect-[4/3]"
-          )}
-        >
-          <Image
-            src={mainSrc}
-            alt={galleryImage.alt}
-            fill
-            priority
-            sizes="(min-width: 1024px) 48vw, 100vw"
-            className="object-cover"
-          />
+        <ProductGallery
+          productName={product.name}
+          category={product.category}
+          images={product.images}
+          activeImage={activeImage}
+          mainSrc={mainSrc}
+          mainAlt={galleryImage.alt}
+          onSelectImage={handleThumbnailClick}
+        />
+
+        {/* Seen in Bloom ♡ and Customer Reviews repositioned beneath product gallery to utilize empty vertical space */}
+        <div className="mt-12 space-y-12">
+          <SeenInBloom productName={product.name} className="mt-0 pt-8" />
+          <CustomerReviews productName={product.name} className="mt-0 pt-8" />
         </div>
-        {product.images.length > 1 ? (
-          <ul className="mt-3 flex gap-2">
-            {product.images.map((image, index) => (
-              <li key={image.src}>
-                <button
-                  type="button"
-                  onClick={() => setActiveImage(index)}
-                  aria-label={`View image ${index + 1} of ${product.name}`}
-                  aria-pressed={activeImage === index}
-                  className={cn(
-                    "relative h-20 w-16 overflow-hidden border bg-ivory-deep",
-                    activeImage === index ? "border-forest" : "border-gold/30",
-                  )}
-                >
-                  <Image
-                    src={image.src}
-                    alt=""
-                    fill
-                    className="object-contain p-1"
-                  />
-                </button>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="mt-3 text-xs text-taupe">
-            Additional gallery images will appear here when supplied.
-          </p>
-        )}
       </div>
 
       <div>
@@ -108,7 +109,9 @@ export function ProductDetail({ product }: { product: Product }) {
             amount={formatDemoPrice(product.priceCents)}
             className="text-xl text-ink"
           />
-          <DemoNote className="mt-2">Demo price — not confirmed retail.</DemoNote>
+          <p className="mt-1 text-xs text-taupe">
+            {product.tentativePriceNote ?? "Tentative Launch Price"}
+          </p>
         </div>
 
         <div className="mt-8 space-y-6">
@@ -125,11 +128,11 @@ export function ProductDetail({ product }: { product: Product }) {
                       key={color.slug}
                       type="button"
                       disabled={!color.available}
-                      onClick={() => setColorSlug(color.slug)}
+                      onClick={() => handleColorSelect(color.slug)}
                       className={cn(
                         "inline-flex items-center gap-2 border px-3 py-2 text-sm transition-colors",
                         active
-                          ? "border-forest bg-forest text-ivory"
+                          ? "border-forest bg-forest text-ivory shadow-xs"
                           : "border-gold/40 text-ink hover:border-forest",
                         !color.available && "cursor-not-allowed opacity-40",
                       )}
@@ -197,43 +200,74 @@ export function ProductDetail({ product }: { product: Product }) {
         <div className="mt-10 space-y-4 text-[15px] leading-7 text-ink-soft">
           <p>{product.description}</p>
           {product.charmNote ? <p>{product.charmNote}</p> : null}
-          <DemoNote>Placeholder copy — replace with client-approved text.</DemoNote>
         </div>
 
-        <div className="mt-10 border-t border-gold/30 pt-8">
-          <h2 className="font-serif text-2xl text-forest">Thoughtful details</h2>
-          <p className="mt-2 text-sm text-taupe">
-            Presented as Lefemme brand features until confirmed per product.
-          </p>
-          <ul className="mt-5 space-y-3">
-            {brandFeatures.map((feature) => (
-              <li key={feature.id} className="text-sm leading-6 text-ink-soft">
-                <span className="font-medium text-forest">{feature.title}.</span>{" "}
-                {feature.body}
-              </li>
-            ))}
-          </ul>
-        </div>
+        {product.features && product.features.length > 0 ? (
+          <div className="mt-10 border-t border-gold/30 pt-8">
+            <h2 className="font-serif text-2xl text-forest">Thoughtful details</h2>
+            <p className="mt-2 text-sm text-taupe">
+              Crafted with intention for your everyday moments.
+            </p>
+            <ul className="mt-5 space-y-3">
+              {product.features.map((feature, idx) => (
+                <li key={idx} className="text-sm leading-6 text-ink-soft">
+                  <span className="font-medium text-forest">{feature.feature}.</span>{" "}
+                  {feature.description}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : (
+          <div className="mt-10 border-t border-gold/30 pt-8">
+            <h2 className="font-serif text-2xl text-forest">Thoughtful details</h2>
+            <ul className="mt-5 space-y-3">
+              {brandFeatures.map((feature) => (
+                <li key={feature.id} className="text-sm leading-6 text-ink-soft">
+                  <span className="font-medium text-forest">{feature.title}.</span>{" "}
+                  {feature.body}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         <dl className="mt-10 grid gap-4 border-t border-gold/30 pt-8 text-sm">
+          {product.materials ? (
+            <div>
+              <dt className="text-[11px] uppercase tracking-[0.2em] text-taupe">
+                Materials & Construction
+              </dt>
+              <dd className="mt-1.5 space-y-1 text-ink-soft">
+                {product.materials.exterior ? <p><strong>Exterior:</strong> {product.materials.exterior}</p> : null}
+                {product.materials.interior ? <p><strong>Interior:</strong> {product.materials.interior}</p> : null}
+                {product.materials.hardware ? <p><strong>Hardware:</strong> {product.materials.hardware}</p> : null}
+                {product.materials.closure ? <p><strong>Closure:</strong> {product.materials.closure}</p> : null}
+                {product.materials.decoration ? <p><strong>Artwork:</strong> {product.materials.decoration}</p> : null}
+              </dd>
+            </div>
+          ) : null}
+          {product.dimensions ? (
+            <div>
+              <dt className="text-[11px] uppercase tracking-[0.2em] text-taupe">
+                Dimensions & Specifications
+              </dt>
+              <dd className="mt-1.5 space-y-1 text-ink-soft">
+                {product.dimensions.length ? <p><strong>Length:</strong> {product.dimensions.length}</p> : null}
+                {product.dimensions.topWidth ? <p><strong>Top Width:</strong> {product.dimensions.topWidth} / Bottom Width: {product.dimensions.bottomWidth}</p> : null}
+                {product.dimensions.height ? <p><strong>Height:</strong> {product.dimensions.height}</p> : null}
+                {product.dimensions.depth ? <p><strong>Depth:</strong> {product.dimensions.depth}</p> : null}
+                {product.dimensions.handleDrop ? <p><strong>Handle Drop:</strong> {product.dimensions.handleDrop}</p> : null}
+                {product.dimensions.laptopCompatibility ? <p><strong>Compatibility:</strong> {product.dimensions.laptopCompatibility}</p> : null}
+                {product.dimensions.hangingLength ? <p><strong>Hanging Length:</strong> {product.dimensions.hangingLength}</p> : null}
+              </dd>
+            </div>
+          ) : null}
           <div>
             <dt className="text-[11px] uppercase tracking-[0.2em] text-taupe">
-              Materials
-            </dt>
-            <dd className="mt-1 text-ink-soft">Details coming soon.</dd>
-          </div>
-          <div>
-            <dt className="text-[11px] uppercase tracking-[0.2em] text-taupe">
-              Dimensions
-            </dt>
-            <dd className="mt-1 text-ink-soft">Details coming soon.</dd>
-          </div>
-          <div>
-            <dt className="text-[11px] uppercase tracking-[0.2em] text-taupe">
-              Shipping & returns
+              Shipping & Delivery
             </dt>
             <dd className="mt-1 text-ink-soft">
-              Policy pages are placeholders until Lefemme confirms terms.
+              Both Cash on Delivery (COD) and online payment options available. Delivery across India.
             </dd>
           </div>
         </dl>

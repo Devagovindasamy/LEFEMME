@@ -51,11 +51,13 @@ export default async function ProductPage({
         <span className="mx-2">/</span>
         <span className="text-forest">{product.name}</span>
       </nav>
+
       <div className="mt-8">
         <ProductDetail product={product} />
       </div>
+
       {related.length > 0 ? (
-        <section className="mt-20">
+        <section className="mt-24 border-t border-gold/20 pt-16">
           <h2 className="font-serif text-3xl text-forest">You may also like</h2>
           <div className="mt-8 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
             {related.map((item) => (

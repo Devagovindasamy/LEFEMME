@@ -24,16 +24,20 @@ function CornerGarden({ side }: { side: "left" | "right" }) {
     >
       <svg viewBox="0 0 190 170" className="h-36 w-44 lg:h-44 lg:w-52 opacity-80">
         {/* Tall wandering stem with two blush buds */}
-        <path d="M46 158 C42 124 53 100 46 66 C44 52 47 42 44 28" fill="none" stroke="#A89B8A" strokeWidth="1" strokeOpacity=".75" />
-        <ellipse cx="45" cy="33" rx="4.6" ry="7.4" fill="#D9C6C9" fillOpacity=".85" transform="rotate(-8 45 33)" />
-        <ellipse cx="50" cy="72" rx="4" ry="6.6" fill="#C6A15B" fillOpacity=".5" transform="rotate(12 50 72)" />
+        <g className="botanical-sway" style={{ transformOrigin: "46px 158px", animationDuration: "7s" }}>
+          <path d="M46 158 C42 124 53 100 46 66 C44 52 47 42 44 28" fill="none" stroke="#A89B8A" strokeWidth="1" strokeOpacity=".75" />
+          <ellipse cx="45" cy="33" rx="4.6" ry="7.4" fill="#D9C6C9" fillOpacity=".85" transform="rotate(-8 45 33)" />
+          <ellipse cx="50" cy="72" rx="4" ry="6.6" fill="#C6A15B" fillOpacity=".5" transform="rotate(12 50 72)" />
+        </g>
         {/* Small flowering sprig */}
-        <path d="M16 158 C15 132 18 116 14 96" fill="none" stroke="#A89B8A" strokeWidth="1" strokeOpacity=".6" />
-        <g transform="translate(13.5 90)">
-          {[0, 72, 144, 216, 288].map((d) => (
-            <circle key={d} cx="0" cy="-3.4" r="1.7" fill="#D9B8BC" transform={`rotate(${d})`} />
-          ))}
-          <circle cx="0" cy="0" r="1.3" fill="#C6A15B" />
+        <g className="botanical-sway" style={{ transformOrigin: "16px 158px", animationDuration: "5.5s", animationDelay: "-2s" }}>
+          <path d="M16 158 C15 132 18 116 14 96" fill="none" stroke="#A89B8A" strokeWidth="1" strokeOpacity=".6" />
+          <g transform="translate(13.5 90)">
+            {[0, 72, 144, 216, 288].map((d) => (
+              <circle key={d} cx="0" cy="-3.4" r="1.7" fill="#D9B8BC" transform={`rotate(${d})`} />
+            ))}
+            <circle cx="0" cy="0" r="1.3" fill="#C6A15B" />
+          </g>
         </g>
         {/* Picket fence with tiny flowers */}
         <g stroke="#B4A48C" strokeOpacity=".8" strokeWidth="1.1" fill="none">
@@ -93,17 +97,18 @@ function DoorLeaf({ side }: { side: "left" | "right" }) {
 }
 
 const BURST_PETALS = [
-  { dx: "-26px", dy: "-64px", rot: "-38deg", delay: "120ms", fill: "#F3EBDD", stroke: "#C6A15B" },
-  { dx: "24px", dy: "-72px", rot: "40deg", delay: "210ms", fill: "#EBCFD2", stroke: "#C6A15B" },
-  { dx: "-4px", dy: "-88px", rot: "16deg", delay: "300ms", fill: "#E5C687", stroke: "#FAF6EF" },
-  { dx: "36px", dy: "-48px", rot: "52deg", delay: "390ms", fill: "#6B1F2E", stroke: "#C6A15B" },
-  { dx: "-38px", dy: "-50px", rot: "-55deg", delay: "470ms", fill: "#D9C6C9", stroke: "#C6A15B" },
+  { dx: "-26px", dy: "-64px", rot: "-38deg", delay: "80ms", fill: "#F3EBDD", stroke: "#C6A15B" },
+  { dx: "24px", dy: "-72px", rot: "40deg", delay: "140ms", fill: "#EBCFD2", stroke: "#C6A15B" },
+  { dx: "-4px", dy: "-88px", rot: "16deg", delay: "220ms", fill: "#E5C687", stroke: "#FAF6EF" },
+  { dx: "36px", dy: "-48px", rot: "52deg", delay: "280ms", fill: "#6B1F2E", stroke: "#C6A15B" },
+  { dx: "-38px", dy: "-50px", rot: "-55deg", delay: "350ms", fill: "#D9C6C9", stroke: "#C6A15B" },
+  { dx: "-18px", dy: "-76px", rot: "-22deg", delay: "180ms", fill: "#FAF6EF", stroke: "#C6A15B" },
+  { dx: "44px", dy: "-60px", rot: "48deg", delay: "310ms", fill: "#EBCFD2", stroke: "#6B1F2E" },
+  { dx: "-46px", dy: "-38px", rot: "-64deg", delay: "400ms", fill: "#E5C687", stroke: "#C6A15B" },
 ];
 
-let hasPassedEntranceInSession = false;
-
 export function EntranceGate({ onEnter }: { onEnter?: () => void }) {
-  const [active, setActive] = useState(false);
+  const [active, setActive] = useState(true);
   const [stage, setStage] = useState<Stage>("idle");
   const [reducedFade, setReducedFade] = useState(false);
   const timersRef = useRef<number[]>([]);
@@ -114,21 +119,14 @@ export function EntranceGate({ onEnter }: { onEnter?: () => void }) {
   }, []);
 
   const dismissEntrance = useCallback(() => {
-    hasPassedEntranceInSession = true;
-    try {
-      sessionStorage.setItem(brand.entrance.sessionKey, "1");
-    } catch {
-      /* ignore */
-    }
     clearAll();
     setActive(false);
     onEnter?.();
   }, [clearAll, onEnter]);
 
-  // Session detection & URL params
+  // Handle URL query parameters (e.g. ?entrance=off or ?entrance=replay) and debug hook
   useEffect(() => {
     (window as unknown as { __lefemmeReplayEntrance?: () => void }).__lefemmeReplayEntrance = () => {
-      hasPassedEntranceInSession = false;
       setStage("idle");
       setActive(true);
     };
@@ -137,26 +135,7 @@ export function EntranceGate({ onEnter }: { onEnter?: () => void }) {
     const mode = params.get(brand.entrance.replayParam);
 
     if (mode === "off") {
-      return;
-    }
-
-    if (mode === "replay") {
-      hasPassedEntranceInSession = false;
-      const id = requestAnimationFrame(() => setActive(true));
-      return () => cancelAnimationFrame(id);
-    }
-
-    if (!hasPassedEntranceInSession) {
-      try {
-        const stored = sessionStorage.getItem(brand.entrance.sessionKey);
-        if (stored === "1") {
-          return;
-        }
-      } catch {
-        /* ignore */
-      }
-      const id = requestAnimationFrame(() => setActive(true));
-      return () => cancelAnimationFrame(id);
+      queueMicrotask(() => setActive(false));
     }
   }, []);
 
@@ -215,9 +194,15 @@ export function EntranceGate({ onEnter }: { onEnter?: () => void }) {
       <CornerGarden side="left" />
       <CornerGarden side="right" />
 
-      {/* Falling petal top-left & scattered sparkles */}
+      {/* Falling petals drifting in breeze & scattered sparkles */}
       <svg viewBox="-8 -8 16 16" className="floaty absolute left-7 top-8 h-4 w-4 opacity-70 md:left-12 md:top-10" aria-hidden="true">
         <path d="M0 4.6 C-3.8 1.2, -3.4 -4, 0 -5.6 C3.4 -4, 3.8 1.2, 0 4.6 Z" fill="#D9B8BC" transform="rotate(-28)" />
+      </svg>
+      <svg viewBox="-8 -8 16 16" className="floaty absolute right-8 top-16 h-3.5 w-3.5 opacity-60 md:right-20 md:top-20" style={{ animationDelay: "-2.2s", animationDuration: "6.2s" }} aria-hidden="true">
+        <path d="M0 4.6 C-3.8 1.2, -3.4 -4, 0 -5.6 C3.4 -4, 3.8 1.2, 0 4.6 Z" fill="#EBCFD2" transform="rotate(34)" />
+      </svg>
+      <svg viewBox="-8 -8 16 16" className="floaty absolute left-[18%] bottom-28 h-3 w-3 opacity-55 hidden sm:block" style={{ animationDelay: "-3.8s", animationDuration: "5.8s" }} aria-hidden="true">
+        <path d="M0 4.6 C-3.8 1.2, -3.4 -4, 0 -5.6 C3.4 -4, 3.8 1.2, 0 4.6 Z" fill="#E5C687" transform="rotate(-15)" />
       </svg>
       <Sparkle className="right-[16%] top-[14%] h-3 w-3" delay="300ms" />
       <Sparkle className="left-[20%] top-[30%] h-2.5 w-2.5" fill="#D9B8BC" delay="900ms" />
@@ -319,7 +304,9 @@ export function EntranceGate({ onEnter }: { onEnter?: () => void }) {
               transition: "transform 1250ms cubic-bezier(.32,.02,.2,1)",
             }}
           >
-            <div className="h-full w-full"><DoorLeaf side="right" /></div>
+            <div className="gate-sway h-full w-full" style={{ animationDelay: "-2.75s", transformOrigin: "50% 100%" }}>
+              <DoorLeaf side="right" />
+            </div>
           </div>
 
           {/* Soft champagne glow + petals spilling from the gap as the doors part */}

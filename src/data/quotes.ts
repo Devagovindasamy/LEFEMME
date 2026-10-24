@@ -1,6 +1,7 @@
 /**
  * Bloomie's Little Discoveries
- * Curated brand reflections, atelier notes, and playful styling whispers.
+ * Official scripture love notes from Jesus provided in the client brief.
+ * "A Little Love Note for You ♡ - Pick a flower. Maybe there's something your heart needs to hear today."
  */
 
 export interface BloomDiscoveryQuote {
@@ -8,68 +9,79 @@ export interface BloomDiscoveryQuote {
   category: "entrance" | "hero" | "handbag" | "botanical" | "charm" | "community" | "atelier";
   text: string;
   authorNote: string;
+  signoff?: string;
 }
 
 export const bloomQuotes: BloomDiscoveryQuote[] = [
   {
     id: "entrance-welcome",
     category: "entrance",
-    text: "Keep a little room for wonder.",
-    authorNote: "Atelier Note · Paris",
+    text: "She is more precious than rubies; nothing you desire can compare with her.",
+    authorNote: "A Little Love Note · 01",
+    signoff: "With love, Jesus ♡",
   },
   {
     id: "hero-annotation",
     category: "hero",
-    text: "A little bloom goes a long way.",
-    authorNote: "The Bloom Club Motto",
+    text: "You are altogether beautiful, my darling; there is no flaw in you.",
+    authorNote: "A Little Love Note · 02",
+    signoff: "With love, Jesus ♡",
   },
   {
     id: "adina-detail",
     category: "handbag",
-    text: "Soft strength. Structured beauty.",
-    authorNote: "On the Adina Silhouette",
+    text: "You are fearfully and wonderfully made.",
+    authorNote: "A Little Love Note · 03",
+    signoff: "With love, Jesus ♡",
   },
   {
     id: "hadar-detail",
     category: "handbag",
-    text: "Details are a quiet love language.",
-    authorNote: "Atelier Leathercraft",
+    text: "She is clothed with strength and dignity, and she laughs without fear of the future.",
+    authorNote: "A Little Love Note · 04",
+    signoff: "With love, Jesus ♡",
   },
   {
     id: "botanical-whisper",
     category: "botanical",
-    text: "Beauty lives in the little things.",
-    authorNote: "Floral Philosophy",
-  },
-  {
-    id: "charm-play",
-    category: "charm",
-    text: "Take the scenic route, Bloomie.",
-    authorNote: "Bag Charm Styling",
+    text: "You are God’s masterpiece, created for a beautiful purpose.",
+    authorNote: "A Little Love Note · 05",
+    signoff: "With love, Jesus ♡",
   },
   {
     id: "community-note",
     category: "community",
-    text: "Some days call for a little extra lovely.",
-    authorNote: "The Bloom Club Invitation",
+    text: "She is more precious than rubies; nothing you desire can compare with her.",
+    authorNote: "A Little Love Note · 01",
+    signoff: "With love, Jesus ♡",
   },
   {
     id: "footer-signoff",
     category: "atelier",
-    text: "Your kind of lovely is always in style.",
-    authorNote: "Lefemme House Note",
+    text: "You are altogether beautiful, my darling; there is no flaw in you.",
+    authorNote: "A Little Love Note · 02",
+    signoff: "With love, Jesus ♡",
+  },
+  {
+    id: "charm-play",
+    category: "charm",
+    text: "You are fearfully and wonderfully made.",
+    authorNote: "A Little Love Note · 03",
+    signoff: "With love, Jesus ♡",
   },
   {
     id: "craft-creed",
     category: "handbag",
-    text: "Crafted slowly, carried joyfully.",
-    authorNote: "Vegetable-Tanned Heritage",
+    text: "She is clothed with strength and dignity, and she laughs without fear of the future.",
+    authorNote: "A Little Love Note · 04",
+    signoff: "With love, Jesus ♡",
   },
   {
     id: "garden-memory",
     category: "botanical",
-    text: "Carry the garden with you, wherever you wander.",
-    authorNote: "Seasonal Keepsake",
+    text: "You are God’s masterpiece, created for a beautiful purpose.",
+    authorNote: "A Little Love Note · 05",
+    signoff: "With love, Jesus ♡",
   },
 ];
 

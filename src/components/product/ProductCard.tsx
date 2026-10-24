@@ -25,12 +25,12 @@ export function ProductCard({
       <Link href={`/products/${product.slug}`} className="block">
         {/* Product Visual Frame */}
         <div
-          className={`relative overflow-hidden rounded-xs border border-gold/30 bg-[#FBF8F3] transition-colors duration-300 group-hover:border-forest/60 ${
+          className={`relative rounded-xs border border-gold/30 bg-[#FBF8F3] transition-colors duration-300 group-hover:border-forest/60 ${
             isCharm ? "aspect-square" : "aspect-[4/3]"
           }`}
         >
           <motion.div
-            className="absolute inset-0"
+            className="absolute inset-0 overflow-hidden rounded-xs"
             whileHover={reduceMotion ? undefined : { scale: 1.03 }}
             transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
           >
@@ -46,10 +46,11 @@ export function ProductCard({
 
           {/* Subtle Discovery Pin for Selected Silhouettes */}
           {(product.id === "adina" || product.id === "hadar") && (
-            <div className="absolute top-2.5 right-2.5 z-10" onClick={(e) => e.stopPropagation()}>
+            <div className="absolute top-2.5 right-2.5 z-30" onClick={(e) => e.stopPropagation()}>
               <BloomDiscovery
                 quoteId={product.id === "adina" ? "adina-detail" : "hadar-detail"}
                 variant="seal"
+                placement="bottom"
                 align="right"
                 label={`${product.name} Atelier Note`}
               />

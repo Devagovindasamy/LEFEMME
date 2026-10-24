@@ -29,7 +29,7 @@ export function CartDrawer() {
           <motion.button
             type="button"
             aria-label="Close shopping bag"
-            className="fixed inset-0 z-50 bg-ink/35"
+            className="fixed inset-0 z-[70] bg-ink/35"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -39,7 +39,7 @@ export function CartDrawer() {
             role="dialog"
             aria-modal="true"
             aria-labelledby="cart-title"
-            className="fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col bg-ivory shadow-2xl"
+            className="fixed inset-y-0 right-0 z-[70] flex w-full max-w-md flex-col bg-ivory shadow-2xl"
             initial={reduceMotion ? false : { x: "100%" }}
             animate={{ x: 0 }}
             exit={reduceMotion ? { opacity: 0 } : { x: "100%" }}

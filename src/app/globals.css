@@ -228,12 +228,22 @@ body {
   animation: petalDrift 1.45s cubic-bezier(0.2, 0.8, 0.3, 1) var(--pdelay, 0ms) forwards;
 }
 
+@keyframes botanicalSway {
+  0%, 100% { transform: rotate(-1.2deg); }
+  50% { transform: rotate(1.4deg); }
+}
+.botanical-sway {
+  animation: botanicalSway 6s ease-in-out infinite;
+  transform-origin: bottom center;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .floaty,
   .gate-sway,
   .gate-blink,
   .gate-glow,
-  .petal-drift {
+  .petal-drift,
+  .botanical-sway {
     animation: none !important;
   }
 }

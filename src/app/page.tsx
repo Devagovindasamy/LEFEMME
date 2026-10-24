@@ -11,6 +11,7 @@ import { Reveal } from "@/components/motion/Reveal";
 import { ProductGrid } from "@/components/product/ProductGrid";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { BloomDiscovery } from "@/components/interactive/BloomDiscovery";
+import { LoveNotesSection } from "@/components/home/LoveNotesSection";
 import { getCharms, getHandbags } from "@/data/catalog";
 import { ensureCatalogSeeded } from "@/lib/seed";
 
@@ -90,6 +91,7 @@ export default async function HomePage() {
         </div>
       </section>
 
+      <LoveNotesSection />
       <FounderNote />
       <BloomClubTeaser />
       <BloomFilm />
